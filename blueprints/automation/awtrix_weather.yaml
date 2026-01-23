@@ -102,6 +102,20 @@ blueprint:
       selector:
         text:
           multiline: true
+      default: >
+        {
+          "0": "#FEC4FF",
+          "10": "#D977DF",
+          "20": "#9545BC",
+          "30": "#4B379C",
+          "40": "#31B8DB",
+          "50": "#31DB8B",
+          "60": "#6ED228",
+          "70": "#FFFF28",
+          "80": "#F87E27",
+          "90": "#CF3927",
+          "100": "#A12527"
+        }
 
     #----------------------------------------
     # Sunrise Sunset Times :)
@@ -186,7 +200,6 @@ variables:
     {%- macro get_device_topic(device_id) %}
     {{ states((device_entities(device_id) | select('search','device_topic') | list)[0]) }}
     {%- endmacro %}
-
     {%- set ns = namespace(devices=[]) %}
     {%- for device_id in device_ids %}
       {%- set device = get_device_topic(device_id)|replace(' ','') %}
@@ -209,7 +222,6 @@ variables:
   temp_text: "{{ current_temp ~ temp_suffix }}"
   forecast_temp_field: !input forecast_temp_field
 
-  # Mond entfernt → volle Breite
   text_available_width: 24
 
   text_len: >-
@@ -233,7 +245,6 @@ variables:
     {%- endfor %}
     {{ length.value }}
     {%- endmacro %}
-
     {{ get_text_len(temp_text) }}
 
   text_x: "{{ 8 + ((text_available_width - text_len)/2) }}"
@@ -257,6 +268,16 @@ variables:
   icon_windy: !input icon_windy
   icon_windy_variant: !input icon_windy_variant
 
+  color_matrix_json: !input color_matrix_json
+  color_dict: >-
+    {% set b = color_matrix_json | from_json %}
+    {%- set ns = namespace(tuples=[]) %}
+    {%- for k,v in b | items -%}
+      {%- set key = k|float -%}
+      {%- set ns.tuples = ns.tuples + [(key,v)] %}
+    {% endfor %}
+    {{ dict.from_keys(ns.tuples) }}
+
   icon_dict: >-
     {{ dict({
       'clear-night': icon_clear_night,
@@ -278,6 +299,40 @@ variables:
 
   icon: "{{ icon_dict[weather] }}"
 
+  payload: >
+    {%- macro interpolate(dictionary, x) -%}
+      {%- set sorted_keys = dictionary|dictsort -%}
+      {%- set above = sorted_keys|selectattr('0', 'gt', x)|map(attribute='0')|list|first -%}
+      {%- set below = sorted_keys|selectattr('0', 'lt', x)|map(attribute='0')|list|last -%}
+      {%- if below is defined and above is defined -%}
+        {{ dictionary[below] }}
+      {%- elif below is defined -%}
+        {{ dictionary[below] }}
+      {%- elif above is defined -%}
+        {{ dictionary[above] }}
+      {%- else -%}
+        "#ffffff"
+      {%- endif -%}
+    {%- endmacro -%}
+
+    {%- macro draw_forecast_lines(x,hours,height) %}
+      {%- for hour in range(hours) %}
+        {"dp":[{{x+hour}},7,"{{interpolate(color_dict, forecast[hour][forecast_temp_field]|float)}}"]}{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    {%- endmacro %}
+
+    {
+      "draw": [
+        {{ draw_forecast_lines(8,hours_to_show,0) }},
+        {"dt":[{{text_x}},1,"{{temp_text}}","{{interpolate(color_dict, current_temp|float)}}"]}
+      ],
+      "icon": "{{icon}}",
+      "duration": {{message_duration}},
+      "pushIcon": 2,
+      "lifetime": 120,
+      "weather": "{{weather}}"
+    }
+
 trigger:
   - platform: time_pattern
     seconds: "/5"
@@ -292,6 +347,8 @@ action:
       sequence:
         - service: mqtt.publish
           data:
+            qos: 0
+            retain: false
             topic: "{{ repeat.item }}"
             payload: >
               {{ payload }}
