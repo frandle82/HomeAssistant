@@ -592,10 +592,10 @@ variables:
     "weather": "{{weather}}"
     }
 
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     minutes: /2
-  - platform: state
+  - trigger: state
     entity_id: !input forecast_var
     id: Changes
     enabled: true
