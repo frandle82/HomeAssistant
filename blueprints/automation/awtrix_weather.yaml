@@ -609,29 +609,6 @@ variables:
   # Forecast hours to show
   hours_to_show: !input hours_to_show
 
-  #---------------------------------
-  # Moon Stuff
-  #---------------------------------
-
-  moon: !input moon
-  moon_phase: "{{states(moon)}}"
-  moon_times: !input moon_rise_set
-  moon_rise: "{{state_attr(moon_times,'moonrise')}}"
-  moon_set: "{{state_attr(moon_times,'moonset')}}"
-  moon_alt: "{{state_attr(moon_times,'moon_altitude')}}"
-  moon_risen: "{{moon_alt > 0}}"
-  when_show_moon: !input when_show_moon
-  show_moon: >-
-    {%- if when_show_moon == 'always' %}
-    True
-    {%- elif when_show_moon == 'never' %}
-    False
-    {%- elif when_show_moon == 'risen' %}
-    {{moon_risen}}
-    {%- else %}
-    {{state_attr('sun.sun', 'elevation') < 0 and moon_risen}}
-    {%- endif %}
-
   #----------------
   # Temp & Text
   # --------------
@@ -758,16 +735,6 @@ variables:
   icon_sunny: !input icon_sunny
   icon_windy: !input icon_windy
   icon_windy_variant: !input icon_windy_variant
-  clear_night_dict: >-
-    {{ dict({
-      'full_moon': '2314',
-      'waning_gibbous': '2315',
-      'last_quarter': '2316',
-      'waning_crescent': '2317',
-      'new_moon': '2318',
-      'waxing_crescent': '2319',
-      'first_quarter': '2320',
-      'waxing_gibbous': '2321'}) }}
   color_matrix_json: !input color_matrix_json
   color_dict: >-
     {% set b = color_matrix_json | from_json %}    
@@ -798,14 +765,8 @@ variables:
   #--------------
   # Weather Icon
   #--------------
-  icon: >
-    {%- if ((current_condition == 'clear_night') and use_moon_clear_night) %}
-      {{clear_night_dict[moon_phase]}}
-    {%- elif (sun_next_event == 'sunrise') and use_moon_sunny_night and (current_condition == 'sunny') -%}
-      
-    {%- else %}
-      {{ icon_dict[current_condition] }}
-    {%- endif %}
+  icon: "{{ icon_dict[current_condition] }}"
+
   #-----------
   # Moon Icon
   #-----------
@@ -950,9 +911,6 @@ action:
                   {"dt":"err"}
                   {%- endif -%}
 
-                  {% if show_moon %}
-                  ,{{moon_data}}
-                  {% endif %}
                   ],
                   "icon": "{{icon}}",
                   "duration": {{message_duration}},
