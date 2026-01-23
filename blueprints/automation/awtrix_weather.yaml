@@ -809,7 +809,7 @@ variables:
 
 trigger:
   - trigger: time_pattern
-    seconds: /5
+    minutes: /2
   - trigger: state
     entity_id: !input forecast_var
     id: Changes
