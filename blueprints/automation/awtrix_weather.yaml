@@ -229,6 +229,7 @@ blueprint:
 
         or just [clicking here](https://my.home-assistant.io/redirect/config_flow_start?domain=moon)
 
+      default:
       selector:
         entity:
           multiple: false
@@ -253,7 +254,7 @@ blueprint:
             - moonset
             - moon_altitude
         ```
-
+      default:
       selector:
         entity:
           multiple: false
