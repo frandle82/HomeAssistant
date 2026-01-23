@@ -258,8 +258,7 @@ blueprint:
         entity:
           multiple: false
           filter:
-            domain:
-              - sensor
+            integration: rest
     enable_moon:
       name: 🌕 Mond anzeigen
       description: >
