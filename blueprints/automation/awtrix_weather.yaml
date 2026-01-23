@@ -343,7 +343,7 @@ condition: []
 
 action:
   - repeat:
-      for_each: "{{ devices_topics }}"
+      topic: "{{ states(repeat.item) }}/custom/jeef_weather"
       sequence:
         - service: mqtt.publish
           data:
