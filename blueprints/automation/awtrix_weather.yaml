@@ -343,12 +343,10 @@ condition: []
 
 action:
   - repeat:
-      topic: "{{ states(repeat.item) }}/custom/jeef_weather"
+      for_each: "{{ devices_topics }}"
       sequence:
         - service: mqtt.publish
           data:
-            qos: 0
-            retain: false
-            topic: "{{ repeat.item }}"
+            topic: "{{ states(repeat.item) }}/custom/jeef_weather"
             payload: >
               {{ payload }}
