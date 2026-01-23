@@ -257,6 +257,9 @@ blueprint:
       selector:
         entity:
           multiple: false
+          filter:
+            domain:
+              - sensor
     when_show_moon:
       name: When should the moon be displayed
       description: >
