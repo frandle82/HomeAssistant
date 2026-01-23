@@ -196,7 +196,7 @@ variables:
   device_ids: !input awtrix
   app_topic: jeef_weather
 
-  devices_topics: "{{ device_ids }}"
+  devices_topics: "{{ device_ids | list }}"
 
   forecast_var: !input forecast_var
   forecast: "{{ state_attr(forecast_var,'forecast') }}"
