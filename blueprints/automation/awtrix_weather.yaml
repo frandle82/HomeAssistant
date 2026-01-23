@@ -236,7 +236,7 @@ blueprint:
           filter:
             integration: moon
     moon_rise_set:
-      name: Moon Rise/Set Sensor
+      name: Moon Riese/Set Sensor
       description: >
         As Home Assistant doesn't provide moon rise/set times you will need to get this from some api. In my personal setup I use [ipgeolocation](https://app.ipgeolocation.io) as my api.
 
@@ -260,14 +260,6 @@ blueprint:
           multiple: false
           filter:
             integration: rest
-    enable_moon:
-      name: 🌕 Mond anzeigen
-      description: >
-        Aktiviert die Mondanzeige (Phase + Zeichnung).
-        Wenn deaktiviert, wird der komplette Mondteil übersprungen.
-      selector:
-        boolean:
-      default: false          
     when_show_moon:
       name: When should the moon be displayed
       description: >
@@ -617,44 +609,29 @@ variables:
   # Forecast hours to show
   hours_to_show: !input hours_to_show
 
-  # ---------------------------------
-  # Moon Stuff (OPTIONAL)
-  # ---------------------------------
-  enable_moon: !input enable_moon
-  
+  #---------------------------------
+  # Moon Stuff
+  #---------------------------------
+
   moon: !input moon
+  moon_phase: "{{states(moon)}}"
   moon_times: !input moon_rise_set
+  moon_rise: "{{state_attr(moon_times,'moonrise')}}"
+  moon_set: "{{state_attr(moon_times,'moonset')}}"
+  moon_alt: "{{state_attr(moon_times,'moon_altitude')}}"
+  moon_risen: "{{moon_alt > 0}}"
   when_show_moon: !input when_show_moon
-  
-  moon_phase: >
-    {% if enable_moon %}
-      {{ states(moon) }}
-    {% else %}
-      none
-    {% endif %}
-  
-  moon_alt: >
-    {% if enable_moon %}
-      {{ state_attr(moon_times, 'moon_altitude') | default(-1) | float }}
-    {% else %}
-      -1
-    {% endif %}
-  
-  moon_risen: "{{ moon_alt > 0 }}"
-  
-  show_moon: >
-    {% if not enable_moon %}
-      false
-    {% elif when_show_moon == 'always' %}
-      true
-    {% elif when_show_moon == 'never' %}
-      false
-    {% elif when_show_moon == 'risen' %}
-      {{ moon_risen }}
-    {% else %}
-      {{ state_attr('sun.sun', 'elevation') < 0 and moon_risen }}
-    {% endif %}
-  
+  show_moon: >-
+    {%- if when_show_moon == 'always' %}
+    True
+    {%- elif when_show_moon == 'never' %}
+    False
+    {%- elif when_show_moon == 'risen' %}
+    {{moon_risen}}
+    {%- else %}
+    {{state_attr('sun.sun', 'elevation') < 0 and moon_risen}}
+    {%- endif %}
+
   #----------------
   # Temp & Text
   # --------------
@@ -821,26 +798,14 @@ variables:
   #--------------
   # Weather Icon
   #--------------
-  icon: >-
-    {%- if not enable_moon -%}
-      {{ icon_dict.get(current_condition, icon_sunny) }}
-    {%- else -%}
-  
-      {%- set is_night = (state_attr('sun.sun', 'elevation') | float(0)) < 0 -%}
-  
-      {%- if show_moon and use_moon_clear_night and current_condition == 'clear-night' -%}
-        {{ clear_night_dict.get(moon_phase, icon_clear_night) }}
-  
-      {%- elif show_moon and use_moon_sunny_night and is_night and current_condition == 'sunny' -%}
-        {{ clear_night_dict.get(moon_phase, icon_sunny) }}
-  
-      {%- else -%}
-        {{ icon_dict.get(current_condition, icon_sunny) }}
-      {%- endif -%}
-  
-    {%- endif -%}
-
-
+  icon: >
+    {%- if ((current_condition == 'clear_night') and use_moon_clear_night) %}
+      {{clear_night_dict[moon_phase]}}
+    {%- elif (sun_next_event == 'sunrise') and use_moon_sunny_night and (current_condition == 'sunny') -%}
+      
+    {%- else %}
+      {{ icon_dict[current_condition] }}
+    {%- endif %}
   #-----------
   # Moon Icon
   #-----------
