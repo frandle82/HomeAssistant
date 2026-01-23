@@ -333,11 +333,7 @@ trigger:
 condition: []
 
 action:
-  - repeat:
-      for_each: "{{ devices_topics }}"
-      sequence:
-        - service: mqtt.publish
-          data:
-            topic: "{{ states(repeat.item) }}/custom/jeef_weather"
-            payload: >
-              {{ payload }}
+  - service: mqtt.publish
+    data:
+      topic: "test/custom/test"
+      payload: '{"text":"HELLO"}'
