@@ -628,8 +628,7 @@ variables:
     {%- endmacro -%}
     {{ round_and_set_temp(current_temp_var, temp_suffix, temp_digits)}}
 
-  text_available_width: >
-    {%- if show_moon %}16{%- else %}24{%- endif %}
+  text_available_width: 24
   text_len: >-
     {%- macro get_text_len(string) %}
     {%- set length = namespace(value=0) %}
