@@ -588,7 +588,8 @@ variables:
   app_topic: jeef_weather
   topics: >-
     {%- macro get_mqtt_prefix(device_id) %}
-    {{ states((device_entities(device_id) | select('search','mqtt_prefix') | list)[0]) }}
+    {%- set prefix_entities = device_entities(device_id) | select('search','mqtt_prefix') | list -%}
+    {{ states(prefix_entities[0]) if prefix_entities else 'unknown' }}
     {%- endmacro %}
 
     {%- set ns = namespace(devices=[]) %}
@@ -596,7 +597,7 @@ variables:
       {%- set device=get_mqtt_prefix(device_id)|replace(' ','') %}
       {% set ns.devices = ns.devices + [ device ~ '/cmd/apps/pushed/' ~ app_topic] %}
     {%- endfor %}
-    {{ ns.devices | reject('match','unavailable') | list}}
+    {{ ns.devices | reject('match','^(unknown|unavailable)') | list}}
 
   #---------------------------------
   # Weather Variables
@@ -651,7 +652,7 @@ variables:
 
     {{get_text_len(temp_text)}}
   text_x: >-
-    {{8 + ((text_available_width - text_len)/2)}}
+    {{ (8 + ((text_available_width - (text_len | int)) / 2)) | int }}
 
   # ------------------------------
   # SUN THINGS
@@ -690,14 +691,9 @@ variables:
       {% set remaining_minutes = sun_min_until_next_event % 60 %}
 
       {% if hours == 0 %}
-          {{ remaining_minutes }} min
+          {{ remaining_minutes | int }} min
       {% else %}
-          [
-            {"t":"{{hours}}", "c":"#ffffff"},
-            {"t":"h", "c":"#9c9d97"},
-            {"t":"{{remaining_minutes}}", "c":"#ffffff"},
-            {"t":"m", "c":"#9c9d97"}
-        ]
+          {{ hours | int }}h {{ remaining_minutes | int }}m
       {% endif %}
       
     {%- endif %}
@@ -860,15 +856,14 @@ action:
 
                 {
                   "draw": [
-                    {%- if hours_to_show > 0 %}
-                    {{draw_forecast_lines(8,hours_to_show,0)}}
+                  {%- if hours_to_show > 0 %}
+                    {{draw_forecast_lines(8,hours_to_show,0)}},
                   {%- endif %}
-                  {%- if current_temp != 'unavailable' -%}
-                  ,["text",{{text_x}},1,"{{temp_text}}","{{interpolate(color_dict, current_temp | float)}}"]
+                  {%- if current_temp not in ['unavailable', 'unknown', none] -%}
+                    ["text",{{text_x}},1,"{{temp_text}}","{{interpolate(color_dict, current_temp | float)}}"]
                   {%- else -%}
-                  ["text",8,1,"err","#FF0000"]
+                    ["text",8,1,"err","#FF0000"]
                   {%- endif -%}
-
                   ],
                   "icon": "{{icon}}",
                   "durationMs": {{(message_duration | int) * 1000}},
