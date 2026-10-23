@@ -203,17 +203,17 @@ blueprint:
           multiline: true
       default: >
         {
+          "-12": "#D977DF",
+          "-6": "#9545BC",
+          "-1": "#4B379C",
           "0": "#FEC4FF",
-          "10": "#D977DF",
-          "20": "#9545BC",
-          "30": "#4B379C",
-          "40": "#31B8DB",
-          "50": "#31DB8B",
-          "60": "#6ED228",
-          "70": "#FFFF28",
-          "80": "#F87E27",
-          "90": "#CF3927",
-          "100": "#A12527"
+          "4": "#31B8DB",
+          "10": "#31DB8B",
+          "15": "#6ED228",
+          "21": "#FFFF28",
+          "27": "#F87E27",
+          "32": "#CF3927",
+          "38": "#A12527"
         }
 
     # -------------
@@ -594,10 +594,10 @@ variables:
 
     {%- set ns = namespace(devices=[]) %}
     {%- for device_id in device_ids %}
-      {%- set device=get_mqtt_prefix(device_id)|replace(' ','') %}
+      {%- set device=get_mqtt_prefix(device_id)|trim %}
       {% set ns.devices = ns.devices + [ device ~ '/cmd/apps/pushed/' ~ app_topic] %}
     {%- endfor %}
-    {{ ns.devices | reject('match','^(unknown|unavailable)') | list}}
+    {{ ns.devices | reject('match','^(unknown|unavailable|none)/') | list}}
 
   #---------------------------------
   # Weather Variables
@@ -702,11 +702,11 @@ variables:
   sun_event_payload: >-
     {"icon":"{{sun_event_icon}}", "text":"{{sun_next_str}}", "durationMs": {{(message_duration_riseset | int) * 1000}}}
   sun_payload: >-
-    {%- if show_sun_rise_set %}
-    {{ iif(sun_event_minute_threshold >= sun_min_until_next_event, sun_event_payload, "{}") }}
-    {%- else %}
-    {}
-    {%- endif %}
+    {%- if show_sun_rise_set and 0 <= (sun_min_until_next_event | float(99999)) <= (sun_event_minute_threshold | int) -%}
+      {{ sun_event_payload }}
+    {%- else -%}
+    {# Empty MQTT payload deletes an AWTRIX NG pushed app. #}
+    {%- endif -%}
 
   # ------------------------------
   # Icons&Stuff
@@ -776,6 +776,9 @@ action:
     data:
       type: hourly
     response_variable: forecast_response
+
+  - condition: template
+    value_template: "{{ forecast_response.get(forecast_var, {}).get('forecast', []) | count > 0 }}"
 
   - repeat:
       for_each: "{{ topics }}"
@@ -877,5 +880,4 @@ action:
             qos: 0
             retain: false
             topic: "{{ repeat.item ~ '_sun'}}"
-            payload: >
-              {{sun_payload}}
+            payload: "{{ sun_payload }}"
