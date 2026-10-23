@@ -737,7 +737,7 @@ variables:
       {%- set key = k|float -%}
       {%- set ns.tuples = ns.tuples + [(key,v)] %}      
     {% endfor %}
-    {{ dict.from_keys(ns.tuples) }}
+    {{ dict(ns.tuples) }}
 
   icon_dict: >-
     {{ dict({'clear-night': icon_clear_night,
@@ -791,10 +791,10 @@ action:
               {%- set below = sorted_keys|selectattr('0', 'lt', x)|map(attribute='0')|list|last -%}
 
               {#- Key matches x exactly -#}
-              {%- if above is defined and dictionary[above] == x -%}
+              {%- if above is defined and above == x -%}
                 {%- set value = dictionary[above] -%}
                 {{ value }}
-              {%- elif below is defined and dictionary[below] == x -%}
+              {%- elif below is defined and below == x -%}
                 {%- set value = dictionary[below] -%}
                 {{ value }}
               {#- Interpolation between two values -#}
@@ -844,13 +844,13 @@ action:
 
               {#- Define a macro to draw out the forecast lines#}
                 {%- macro draw_forecast_lines(x,hours,height) %}
-                  {%- for hour in range(hours) %}
+                  {%- for hour in range([hours | int, forecast | length, 24] | min) %}
                     {%- if height == 0 %}
                       ["pixel",{{x+hour}},7,"{{interpolate(color_dict, forecast[hour]['temperature']) }}"]
                     {%- else %}
                       ["line",{{x+hour}},7,{{x+hour}},{{7 - height}},"{{interpolate(color_dict, forecast[hour]['temperature']) }}"]
                     {%- endif %}
-                    {%- if hour+1 != hours %},{%endif%}
+                    {%- if not loop.last %},{%endif%}
                   {%- endfor %}
                 {%- endmacro %}
 
@@ -866,8 +866,8 @@ action:
                   {%- endif -%}
                   ],
                   "icon": "{{icon}}",
-                  "durationMs": {{(message_duration | int) * 1000}},
-                  "iconMode": "push",
+                  "durationMs": {{(message_duration | int) * 1000 if (message_duration | int) > 0 else 0}},
+                  "iconMode": "fixed",
                   "lifetimeMs": 120000,
                   "lifetimeExpiry":"mark"
                   }
